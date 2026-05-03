@@ -2,17 +2,30 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import ExtraTreesClassifier, HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, cross_val_score
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, RobustScaler
 
 IMPUTE_STRATEGY = "median"
-MODEL_PARAMS = {
+RANDOM_STATE = 42
+BASELINE_MODEL_PARAMS = {
     "max_depth": 6,
     "learning_rate": 0.08,
     "max_iter": 300,
-    "random_state": 42,
+    "random_state": RANDOM_STATE,
+}
+CV_FOLDS = 5
+SEARCH_FOLDS = 3
+SEARCH_ITER = 40
+EXTRATREES_PARAM_SPACE = {
+    "extratreesclassifier__n_estimators": [300, 600],
+    "extratreesclassifier__max_depth": [None, 20, 40],
+    "extratreesclassifier__min_samples_split": [2, 5],
+    "extratreesclassifier__min_samples_leaf": [1, 2],
+    "extratreesclassifier__max_features": ["sqrt", "log2", 0.5, 0.7],
+    "extratreesclassifier__class_weight": [None, "balanced"],
 }
 
 
@@ -50,6 +63,28 @@ def validate_numeric_features(
         )
 
 
+def describe_label_distribution(labels: pd.Series) -> None:
+    counts = labels.value_counts().sort_index()
+    ratios = (counts / counts.sum()).round(4)
+    summary = pd.DataFrame({"count": counts, "ratio": ratios})
+    print("Label distribution:")
+    print(summary.to_string())
+
+
+def evaluate_cv(
+    name: str,
+    pipeline,
+    x_train: pd.DataFrame,
+    y_train: pd.Series,
+    cv: StratifiedKFold,
+) -> float:
+    scores = cross_val_score(
+        pipeline, x_train, y_train, scoring="accuracy", cv=cv, n_jobs=-1
+    )
+    print(f"{name} CV accuracy: {scores.mean():.4f} ± {scores.std():.4f}")
+    return scores.mean()
+
+
 def main() -> None:
     # 源码/ is one level below the repo root
     repo_root = Path(__file__).resolve().parent.parent
@@ -80,6 +115,7 @@ def main() -> None:
     y_train = train_df["label"]
     if y_train.isna().any():
         raise SystemExit("train_data.csv contains missing label values.")
+    describe_label_distribution(y_train)
     missing_in_test = sorted(feature_col_set - set(test_df.columns))
     if missing_in_test:
         raise SystemExit(
@@ -100,11 +136,46 @@ def main() -> None:
             + str(exc)
         ) from exc
 
-    model = make_pipeline(
+    baseline_pipeline = make_pipeline(
         SimpleImputer(strategy=IMPUTE_STRATEGY),
-        HistGradientBoostingClassifier(**MODEL_PARAMS),
+        HistGradientBoostingClassifier(**BASELINE_MODEL_PARAMS),
     )
-    model.fit(x_train, y_train_encoded)
+    baseline_cv = StratifiedKFold(
+        n_splits=CV_FOLDS, shuffle=True, random_state=RANDOM_STATE
+    )
+    evaluate_cv(
+        "HistGradientBoosting (baseline)",
+        baseline_pipeline,
+        x_train,
+        y_train_encoded,
+        baseline_cv,
+    )
+
+    search_pipeline = make_pipeline(
+        SimpleImputer(strategy=IMPUTE_STRATEGY),
+        RobustScaler(),
+        ExtraTreesClassifier(
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
+        ),
+    )
+    search_cv = StratifiedKFold(
+        n_splits=SEARCH_FOLDS, shuffle=True, random_state=RANDOM_STATE
+    )
+    search = RandomizedSearchCV(
+        search_pipeline,
+        param_distributions=EXTRATREES_PARAM_SPACE,
+        n_iter=SEARCH_ITER,
+        scoring="accuracy",
+        cv=search_cv,
+        n_jobs=-1,
+        random_state=RANDOM_STATE,
+        verbose=1,
+    )
+    search.fit(x_train, y_train_encoded)
+    print(f"Best CV accuracy: {search.best_score_:.4f}")
+    print(f"Best params: {search.best_params_}")
+    model = search.best_estimator_
 
     joblib.dump({"pipeline": model, "label_encoder": label_encoder}, model_path)
     print(f"Model saved to {model_path}")
