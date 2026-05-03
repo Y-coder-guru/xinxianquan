@@ -43,6 +43,14 @@ python 源码/train_and_predict.py
 - 训练好的模型保存至 `模型/model.joblib`
 - 预测结果保存至 `提交结果/submission.csv`
 
+## 训练策略说明
+
+- 脚本会先输出标签分布以及 5 折交叉验证的基线准确率（HistGradientBoosting）。
+- 使用 `SimpleImputer(add_indicator=True)` + `RobustScaler` 进行缺失值处理与特征标准化。
+- 采用 `ExtraTreesClassifier` 并通过 `RandomizedSearchCV`（3 折）进行简洁的超参搜索。
+- 最终以搜索得到的最佳模型训练全量数据并生成提交文件。
+- 可在 `源码/train_and_predict.py` 中调整 `CV_FOLDS`、`SEARCH_ITER` 与 `EXTRATREES_PARAM_SPACE`。
+
 ## 使用 Docker 运行
 
 ### 构建并运行容器
