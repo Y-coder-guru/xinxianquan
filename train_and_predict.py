@@ -51,9 +51,10 @@ def main() -> None:
         raise SystemExit("test_data.csv contains no rows.")
 
     feature_cols = [col for col in train_df.columns if col not in {"id", "label"}]
+    feature_col_set = set(feature_cols)
     x_train = train_df[feature_cols]
     y_train = train_df["label"]
-    missing_in_test = sorted(set(feature_cols) - set(test_df.columns))
+    missing_in_test = sorted(feature_col_set - set(test_df.columns))
     if missing_in_test:
         raise SystemExit(
             "test_data.csv is missing feature columns: "
@@ -63,13 +64,13 @@ def main() -> None:
     x_test = test_df[feature_cols]
 
     label_encoder = LabelEncoder()
-    y_encoded = label_encoder.fit_transform(y_train)
+    y_train_encoded = label_encoder.fit_transform(y_train)
 
     model = make_pipeline(
         SimpleImputer(strategy=IMPUTE_STRATEGY),
         HistGradientBoostingClassifier(**MODEL_PARAMS),
     )
-    model.fit(x_train, y_encoded)
+    model.fit(x_train, y_train_encoded)
 
     predictions = model.predict(x_test)
     predicted_labels = label_encoder.inverse_transform(predictions)
