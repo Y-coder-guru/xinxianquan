@@ -153,11 +153,9 @@ def calculate_imbalance_ratio(labels: pd.Series) -> float:
 
 
 def choose_scoring(labels: pd.Series, imbalance_ratio: float) -> tuple[str, str]:
-    if imbalance_ratio >= IMBALANCE_RATIO_THRESHOLD:
-        if labels.nunique() == 2:
-            return "roc_auc", "ROC-AUC"
-        return "f1_macro", "F1-macro"
-    return "accuracy", "accuracy"
+    """Competition metric is fixed to macro F1 for this 12-class task."""
+    _ = (labels, imbalance_ratio)
+    return "f1_macro", "F1-macro"
 
 
 def choose_impute_strategy(missing_ratio: pd.Series) -> str:
