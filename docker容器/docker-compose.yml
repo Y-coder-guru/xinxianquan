@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  xinxianquan:
+    build:
+      context: ..
+      dockerfile: docker容器/Dockerfile
+    volumes:
+      # Mount 模型/ and 提交结果/ so generated files are accessible on the host
+      - ../模型:/app/模型
+      - ../提交结果:/app/提交结果
