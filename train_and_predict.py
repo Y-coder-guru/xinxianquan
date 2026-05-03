@@ -73,6 +73,7 @@ def main() -> None:
 
     submission = pd.DataFrame({"id": test_df["id"], "label": predicted_labels})
     submission.to_csv(output_path, index=False, encoding="utf-8")
+    print(f"Submission written to {output_path}")
 
 
 if __name__ == "__main__":
