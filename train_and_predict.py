@@ -34,6 +34,21 @@ def validate_required_columns(
         )
 
 
+def validate_numeric_features(
+    df: pd.DataFrame, feature_cols: list[str], filename: str
+) -> None:
+    non_numeric = [
+        col
+        for col in feature_cols
+        if not pd.api.types.is_numeric_dtype(df[col])
+    ]
+    if non_numeric:
+        raise SystemExit(
+            f"{filename} has non-numeric feature columns: "
+            + ", ".join(sorted(non_numeric))
+        )
+
+
 def main() -> None:
     repo_root = Path(__file__).resolve().parent
     train_path = repo_root / "train_data.csv"
@@ -54,6 +69,8 @@ def main() -> None:
     feature_col_set = set(feature_cols)
     x_train = train_df[feature_cols]
     y_train = train_df["label"]
+    if y_train.isna().any():
+        raise SystemExit("train_data.csv contains missing label values.")
     missing_in_test = sorted(feature_col_set - set(test_df.columns))
     if missing_in_test:
         raise SystemExit(
@@ -62,6 +79,8 @@ def main() -> None:
         )
 
     x_test = test_df[feature_cols]
+    validate_numeric_features(train_df, feature_cols, "train_data.csv")
+    validate_numeric_features(test_df, feature_cols, "test_data.csv")
 
     label_encoder = LabelEncoder()
     y_train_encoded = label_encoder.fit_transform(y_train)
