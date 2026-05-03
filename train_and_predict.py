@@ -16,6 +16,16 @@ def load_csv(path: Path) -> pd.DataFrame:
         raise SystemExit(f"Failed to read {path.name}: {exc}") from exc
 
 
+def validate_required_columns(
+    df: pd.DataFrame, required: set[str], filename: str
+) -> None:
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise SystemExit(
+            f"{filename} is missing required columns: {', '.join(missing)}"
+        )
+
+
 def main() -> None:
     repo_root = Path(__file__).resolve().parent
     train_path = repo_root / "train_data.csv"
@@ -25,12 +35,12 @@ def main() -> None:
     train_df = load_csv(train_path)
     test_df = load_csv(test_path)
 
-    if "label" not in train_df.columns:
-        raise SystemExit("train_data.csv must contain a 'label' column.")
-    if "id" not in train_df.columns:
-        raise SystemExit("train_data.csv must contain an 'id' column.")
-    if "id" not in test_df.columns:
-        raise SystemExit("test_data.csv must contain an 'id' column.")
+    validate_required_columns(train_df, {"id", "label"}, "train_data.csv")
+    validate_required_columns(test_df, {"id"}, "test_data.csv")
+    if train_df.empty:
+        raise SystemExit("train_data.csv contains no rows.")
+    if test_df.empty:
+        raise SystemExit("test_data.csv contains no rows.")
 
     feature_cols = [col for col in train_df.columns if col not in {"id", "label"}]
     x_train = train_df[feature_cols]
