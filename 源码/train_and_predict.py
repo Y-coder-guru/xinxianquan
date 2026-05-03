@@ -1,8 +1,8 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import (
     ExtraTreesClassifier,
@@ -193,7 +193,7 @@ def build_pipeline(impute_strategy: str, model, scale: bool) -> object:
 
 
 def build_fit_params(
-    pipeline, sample_weight: Sequence[float] | None
+    pipeline, sample_weight: np.ndarray | pd.Series | None
 ) -> dict:
     """Build fit params dict with the estimator step name for sample weights."""
     if sample_weight is None:
@@ -396,6 +396,7 @@ def main() -> None:
     )
     sample_weight = None
     if needs_sample_weight:
+        # Compute once and reuse for any model that needs sample_weight.
         sample_weight = compute_sample_weight(
             class_weight="balanced", y=y_train_encoded
         )
@@ -407,7 +408,10 @@ def main() -> None:
     baseline_fit_params = {}
     if baseline_needs_weight:
         if sample_weight is None:
-            raise SystemExit("Sample weights required for baseline model.")
+            raise SystemExit(
+                "Sample weights required for baseline model due to class "
+                "imbalance and lack of class_weight support."
+            )
         baseline_fit_params = build_fit_params(
             baseline_pipeline, sample_weight
         )
@@ -438,7 +442,9 @@ def main() -> None:
         if spec.needs_sample_weight:
             if sample_weight is None:
                 raise SystemExit(
-                    f"Sample weights required for {spec.name}."
+                    "Sample weights required for "
+                    f"{spec.name} due to class imbalance and lack of "
+                    "class_weight support."
                 )
             fit_params = build_fit_params(spec.pipeline, sample_weight)
         search.fit(x_train, y_train_encoded, **fit_params)
