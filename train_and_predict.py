@@ -25,6 +25,13 @@ def main() -> None:
     train_df = load_csv(train_path)
     test_df = load_csv(test_path)
 
+    if "label" not in train_df.columns:
+        raise SystemExit("train_data.csv must contain a 'label' column.")
+    if "id" not in train_df.columns:
+        raise SystemExit("train_data.csv must contain an 'id' column.")
+    if "id" not in test_df.columns:
+        raise SystemExit("test_data.csv must contain an 'id' column.")
+
     feature_cols = [col for col in train_df.columns if col not in {"id", "label"}]
     x_train = train_df[feature_cols]
     y_train = train_df["label"]
