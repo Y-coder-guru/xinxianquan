@@ -18,7 +18,7 @@ BASELINE_MODEL_PARAMS = {
 }
 CV_FOLDS = 5
 SEARCH_FOLDS = 3
-SEARCH_ITER = 20
+SEARCH_ITER = 30
 EXTRATREES_PARAM_SPACE = {
     "extratreesclassifier__n_estimators": [300, 600],
     "extratreesclassifier__max_depth": [None, 20, 40],
@@ -136,6 +136,8 @@ def main() -> None:
         ) from exc
 
     baseline_pipeline = make_pipeline(
+        SimpleImputer(strategy=IMPUTE_STRATEGY),
+        RobustScaler(),
         HistGradientBoostingClassifier(**BASELINE_MODEL_PARAMS),
     )
     baseline_cv = StratifiedKFold(
