@@ -20,11 +20,11 @@ CV_FOLDS = 5
 SEARCH_FOLDS = 3
 SEARCH_ITER = 20
 EXTRATREES_PARAM_SPACE = {
-    "extratreesclassifier__n_estimators": [300, 500, 800],
-    "extratreesclassifier__max_depth": [None, 10, 20, 30, 40],
-    "extratreesclassifier__min_samples_split": [2, 5, 10],
-    "extratreesclassifier__min_samples_leaf": [1, 2, 4],
-    "extratreesclassifier__max_features": [0.4, 0.6, 0.8, 1.0],
+    "extratreesclassifier__n_estimators": [300, 600],
+    "extratreesclassifier__max_depth": [None, 20, 40],
+    "extratreesclassifier__min_samples_split": [2, 5],
+    "extratreesclassifier__min_samples_leaf": [1, 2],
+    "extratreesclassifier__max_features": [0.5, 0.7, 1.0],
 }
 
 
@@ -150,7 +150,7 @@ def main() -> None:
     )
 
     search_pipeline = make_pipeline(
-        SimpleImputer(strategy=IMPUTE_STRATEGY, add_indicator=True),
+        SimpleImputer(strategy=IMPUTE_STRATEGY),
         RobustScaler(),
         ExtraTreesClassifier(
             random_state=RANDOM_STATE,
