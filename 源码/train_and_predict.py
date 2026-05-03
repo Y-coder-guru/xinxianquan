@@ -18,13 +18,13 @@ BASELINE_MODEL_PARAMS = {
 }
 CV_FOLDS = 5
 SEARCH_FOLDS = 3
-SEARCH_ITER = 30
+SEARCH_ITER = 40
 EXTRATREES_PARAM_SPACE = {
     "extratreesclassifier__n_estimators": [300, 600],
     "extratreesclassifier__max_depth": [None, 20, 40],
     "extratreesclassifier__min_samples_split": [2, 5],
     "extratreesclassifier__min_samples_leaf": [1, 2],
-    "extratreesclassifier__max_features": ["sqrt", "log2", 0.5, 0.7, 1.0],
+    "extratreesclassifier__max_features": ["sqrt", "log2", 0.5, 0.7],
     "extratreesclassifier__class_weight": [None, "balanced"],
 }
 
