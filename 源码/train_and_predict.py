@@ -52,7 +52,6 @@ RANDOMFOREST_PARAM_SPACE = {
     "randomforestclassifier__min_samples_split": [2, 5, 10],
     "randomforestclassifier__min_samples_leaf": [1, 2, 4],
     "randomforestclassifier__max_features": ["sqrt", "log2", 0.5, 0.7],
-    "randomforestclassifier__bootstrap": [True],
 }
 HGB_PARAM_SPACE = {
     "histgradientboostingclassifier__max_depth": [None, 6, 10],
@@ -64,6 +63,7 @@ HGB_PARAM_SPACE = {
 }
 LOGISTIC_PARAM_SPACE = {
     "logisticregression__C": [0.1, 0.3, 1.0, 3.0, 10.0],
+    "logisticregression__penalty": ["l1", "l2"],
 }
 
 
@@ -195,7 +195,7 @@ def build_pipeline(impute_strategy: str, model, scale: bool) -> object:
 def build_fit_params(
     pipeline: Pipeline, sample_weight: np.ndarray | pd.Series | None
 ) -> dict:
-    """Build fit params dict with the estimator step name for sample weights."""
+    """Build fit params dict with the estimator step name for `sample_weight`."""
     if sample_weight is None:
         return {}
     estimator_step = pipeline.steps[-1][0]
@@ -275,7 +275,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     logistic = LogisticRegression(
         random_state=RANDOM_STATE,
         max_iter=LOGISTIC_MAX_ITER,
-        solver="lbfgs",
+        solver="saga",
     )
     logistic_needs_weight = setup_class_weighting(logistic, use_class_weight)
     specs.append(
