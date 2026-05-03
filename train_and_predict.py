@@ -83,7 +83,13 @@ def main() -> None:
     validate_numeric_features(test_df, feature_cols, "test_data.csv")
 
     label_encoder = LabelEncoder()
-    y_train_encoded = label_encoder.fit_transform(y_train)
+    try:
+        y_train_encoded = label_encoder.fit_transform(y_train)
+    except Exception as exc:  # pragma: no cover - defensive for unexpected labels
+        raise SystemExit(
+            "Failed to encode labels in train_data.csv: "
+            + str(exc)
+        ) from exc
 
     model = make_pipeline(
         SimpleImputer(strategy=IMPUTE_STRATEGY),
@@ -91,7 +97,13 @@ def main() -> None:
     )
     model.fit(x_train, y_train_encoded)
 
-    predictions = model.predict(x_test)
+    try:
+        predictions = model.predict(x_test)
+    except Exception as exc:  # pragma: no cover - defensive for model issues
+        raise SystemExit(
+            "Prediction failed for test_data.csv: "
+            + str(exc)
+        ) from exc
     predicted_labels = label_encoder.inverse_transform(predictions)
 
     submission = pd.DataFrame({"id": test_df["id"], "label": predicted_labels})
