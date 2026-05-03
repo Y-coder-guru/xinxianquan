@@ -25,6 +25,7 @@ EXTRATREES_PARAM_SPACE = {
     "extratreesclassifier__min_samples_split": [2, 5],
     "extratreesclassifier__min_samples_leaf": [1, 2],
     "extratreesclassifier__max_features": [0.5, 0.7, 1.0],
+    "extratreesclassifier__class_weight": [None, "balanced"],
 }
 
 
@@ -157,7 +158,6 @@ def main() -> None:
         ExtraTreesClassifier(
             random_state=RANDOM_STATE,
             n_jobs=-1,
-            class_weight="balanced",
         ),
     )
     search_cv = StratifiedKFold(

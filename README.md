@@ -45,7 +45,7 @@ python 源码/train_and_predict.py
 
 ## 训练策略说明
 
-- 脚本会先输出标签分布以及 5 折交叉验证的基线准确率（HistGradientBoostingClassifier，使用相同的缺失值处理与标准化以便对比）。
+- 脚本会先输出标签分布以及 5 折交叉验证的基线准确率（HistGradientBoostingClassifier，保持与搜索模型一致的缺失值处理与标准化流程便于对比）。
 - 使用 `SimpleImputer` + `RobustScaler` 进行缺失值处理与特征标准化。
 - 采用 `ExtraTreesClassifier` 并通过 `RandomizedSearchCV`（3 折）进行简洁的超参搜索。
 - RandomizedSearchCV 默认会在全量数据上重新拟合最佳模型，脚本直接使用该模型生成提交文件。
