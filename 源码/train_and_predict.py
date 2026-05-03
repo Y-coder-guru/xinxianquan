@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,7 @@ IMPUTE_STRATEGY_LOW_MISSING = "mean"
 MISSING_RATIO_MAX_THRESHOLD = 0.2
 MISSING_RATIO_AVG_THRESHOLD = 0.05
 IMBALANCE_RATIO_THRESHOLD = 2.0
+LOGISTIC_MAX_ITER = 2000
 RANDOM_STATE = 42
 BASELINE_MODEL_PARAMS = {
     "max_depth": 6,
@@ -172,7 +174,8 @@ def choose_impute_strategy(missing_ratio: pd.Series) -> str:
     return strategy
 
 
-def configure_class_weight(model, use_class_weight: bool) -> bool:
+def setup_class_weighting(model, use_class_weight: bool) -> bool:
+    """Apply class_weight when supported; return True if sample_weight is needed."""
     if not use_class_weight:
         return False
     if "class_weight" in model.get_params():
@@ -189,7 +192,10 @@ def build_pipeline(impute_strategy: str, model, scale: bool) -> object:
     return make_pipeline(*steps)
 
 
-def build_fit_params(pipeline, sample_weight: pd.Series | None) -> dict:
+def build_fit_params(
+    pipeline, sample_weight: Sequence[float] | None
+) -> dict:
+    """Build fit params dict with the estimator step name for sample weights."""
     if sample_weight is None:
         return {}
     estimator_step = pipeline.steps[-1][0]
@@ -225,7 +231,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     specs: list[ModelSpec] = []
 
     extratrees = ExtraTreesClassifier(random_state=RANDOM_STATE, n_jobs=-1)
-    extratrees_needs_weight = configure_class_weight(
+    extratrees_needs_weight = setup_class_weighting(
         extratrees, use_class_weight
     )
     specs.append(
@@ -241,7 +247,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     random_forest = RandomForestClassifier(
         random_state=RANDOM_STATE, n_jobs=-1
     )
-    random_forest_needs_weight = configure_class_weight(
+    random_forest_needs_weight = setup_class_weighting(
         random_forest, use_class_weight
     )
     specs.append(
@@ -255,7 +261,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     )
 
     hgb = HistGradientBoostingClassifier(random_state=RANDOM_STATE)
-    hgb_needs_weight = configure_class_weight(hgb, use_class_weight)
+    hgb_needs_weight = setup_class_weighting(hgb, use_class_weight)
     specs.append(
         ModelSpec(
             name="HistGradientBoosting",
@@ -267,9 +273,11 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     )
 
     logistic = LogisticRegression(
-        random_state=RANDOM_STATE, max_iter=2000, solver="lbfgs"
+        random_state=RANDOM_STATE,
+        max_iter=LOGISTIC_MAX_ITER,
+        solver="lbfgs",
     )
-    logistic_needs_weight = configure_class_weight(logistic, use_class_weight)
+    logistic_needs_weight = setup_class_weighting(logistic, use_class_weight)
     specs.append(
         ModelSpec(
             name="LogisticRegression",
@@ -367,24 +375,39 @@ def main() -> None:
             + str(exc)
         ) from exc
 
-    sample_weight = None
-    if use_class_weight:
-        sample_weight = compute_sample_weight(
-            class_weight="balanced", y=y_train_encoded
-        )
-
     baseline_model = HistGradientBoostingClassifier(**BASELINE_MODEL_PARAMS)
-    baseline_needs_weight = configure_class_weight(
+    baseline_needs_weight = setup_class_weighting(
         baseline_model, use_class_weight
     )
     baseline_pipeline = build_pipeline(
         impute_strategy, baseline_model, scale=False
     )
+
+    search_cv = StratifiedKFold(
+        n_splits=SEARCH_FOLDS, shuffle=True, random_state=RANDOM_STATE
+    )
+    evaluation_cv = RepeatedStratifiedKFold(
+        n_splits=CV_FOLDS, n_repeats=CV_REPEATS, random_state=RANDOM_STATE
+    )
+    model_specs = build_model_specs(impute_strategy, use_class_weight)
+    needs_sample_weight = use_class_weight and (
+        baseline_needs_weight
+        or any(spec.needs_sample_weight for spec in model_specs)
+    )
+    sample_weight = None
+    if needs_sample_weight:
+        sample_weight = compute_sample_weight(
+            class_weight="balanced", y=y_train_encoded
+        )
+        print("Sample weights computed for models without class_weight.")
+
     baseline_cv = RepeatedStratifiedKFold(
         n_splits=CV_FOLDS, n_repeats=CV_REPEATS, random_state=RANDOM_STATE
     )
     baseline_fit_params = {}
     if baseline_needs_weight:
+        if sample_weight is None:
+            raise SystemExit("Sample weights required for baseline model.")
         baseline_fit_params = build_fit_params(
             baseline_pipeline, sample_weight
         )
@@ -397,14 +420,6 @@ def main() -> None:
         scoring,
         baseline_fit_params,
     )
-
-    search_cv = StratifiedKFold(
-        n_splits=SEARCH_FOLDS, shuffle=True, random_state=RANDOM_STATE
-    )
-    evaluation_cv = RepeatedStratifiedKFold(
-        n_splits=CV_FOLDS, n_repeats=CV_REPEATS, random_state=RANDOM_STATE
-    )
-    model_specs = build_model_specs(impute_strategy, use_class_weight)
     results = []
 
     for spec in model_specs:
@@ -421,6 +436,10 @@ def main() -> None:
         )
         fit_params = {}
         if spec.needs_sample_weight:
+            if sample_weight is None:
+                raise SystemExit(
+                    f"Sample weights required for {spec.name}."
+                )
             fit_params = build_fit_params(spec.pipeline, sample_weight)
         search.fit(x_train, y_train_encoded, **fit_params)
         print(
@@ -448,7 +467,16 @@ def main() -> None:
             }
         )
 
-    best_result = max(results, key=lambda item: item["stable_score"])
+    if not results:
+        raise SystemExit("No model results were generated.")
+    valid_results = [
+        result
+        for result in results
+        if pd.notna(result["stable_score"])
+    ]
+    if not valid_results:
+        raise SystemExit("All model evaluations failed to return valid scores.")
+    best_result = max(valid_results, key=lambda item: item["stable_score"])
     print("Model comparison summary:")
     for result in results:
         print(
