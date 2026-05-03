@@ -63,7 +63,6 @@ HGB_PARAM_SPACE = {
 }
 LOGISTIC_PARAM_SPACE = {
     "logisticregression__C": [0.1, 0.3, 1.0, 3.0, 10.0],
-    "logisticregression__penalty": ["l1", "l2"],
 }
 
 
@@ -132,6 +131,7 @@ def summarize_feature_distribution(
 def find_constant_features(
     df: pd.DataFrame, feature_cols: list[str]
 ) -> list[str]:
+    """Return columns with a single unique value, counting NaN as a value."""
     return [
         col for col in feature_cols if df[col].nunique(dropna=False) <= 1
     ]
@@ -180,6 +180,10 @@ def setup_class_weighting(model, use_class_weight: bool) -> bool:
         return False
     if "class_weight" in model.get_params():
         model.set_params(class_weight="balanced")
+        if model.get_params().get("class_weight") != "balanced":
+            raise SystemExit(
+                f"Failed to set class_weight on {model.__class__.__name__}."
+            )
         return False
     return True
 
@@ -277,8 +281,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     logistic = LogisticRegression(
         random_state=RANDOM_STATE,
         max_iter=LOGISTIC_MAX_ITER,
-        # Saga supports the L1 penalty used in the search space.
-        solver="saga",
+        solver="lbfgs",
     )
     logistic_needs_weight = setup_class_weighting(logistic, use_class_weight)
     specs.append(
