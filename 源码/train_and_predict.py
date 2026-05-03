@@ -24,7 +24,7 @@ EXTRATREES_PARAM_SPACE = {
     "extratreesclassifier__max_depth": [None, 10, 20, 30, 40],
     "extratreesclassifier__min_samples_split": [2, 5, 10],
     "extratreesclassifier__min_samples_leaf": [1, 2, 4],
-    "extratreesclassifier__max_features": ["sqrt", "log2", 0.5, 0.8],
+    "extratreesclassifier__max_features": [0.4, 0.6, 0.8, 1.0],
 }
 
 
@@ -136,8 +136,6 @@ def main() -> None:
         ) from exc
 
     baseline_pipeline = make_pipeline(
-        SimpleImputer(strategy=IMPUTE_STRATEGY, add_indicator=True),
-        RobustScaler(),
         HistGradientBoostingClassifier(**BASELINE_MODEL_PARAMS),
     )
     baseline_cv = StratifiedKFold(
