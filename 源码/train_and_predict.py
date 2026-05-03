@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import joblib
 import numpy as np
@@ -17,7 +18,7 @@ from sklearn.model_selection import (
     StratifiedKFold,
     cross_val_score,
 )
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import LabelEncoder, RobustScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
@@ -39,20 +40,19 @@ CV_REPEATS = 2
 SEARCH_FOLDS = 5
 SEARCH_ITER = 60
 EXTRATREES_PARAM_SPACE = {
-    "extratreesclassifier__n_estimators": [400, 600, 900],
+    "extratreesclassifier__n_estimators": [300, 600, 800],
     "extratreesclassifier__max_depth": [None, 20, 40],
     "extratreesclassifier__min_samples_split": [2, 5, 10],
     "extratreesclassifier__min_samples_leaf": [1, 2, 4],
     "extratreesclassifier__max_features": ["sqrt", "log2", 0.5, 0.7, 0.9],
-    "extratreesclassifier__bootstrap": [False, True],
 }
 RANDOMFOREST_PARAM_SPACE = {
-    "randomforestclassifier__n_estimators": [300, 600, 900],
+    "randomforestclassifier__n_estimators": [300, 600, 800],
     "randomforestclassifier__max_depth": [None, 20, 40],
     "randomforestclassifier__min_samples_split": [2, 5, 10],
     "randomforestclassifier__min_samples_leaf": [1, 2, 4],
     "randomforestclassifier__max_features": ["sqrt", "log2", 0.5, 0.7],
-    "randomforestclassifier__bootstrap": [False, True],
+    "randomforestclassifier__bootstrap": [True],
 }
 HGB_PARAM_SPACE = {
     "histgradientboostingclassifier__max_depth": [None, 6, 10],
@@ -70,8 +70,8 @@ LOGISTIC_PARAM_SPACE = {
 @dataclass
 class ModelSpec:
     name: str
-    pipeline: object
-    param_distributions: dict[str, list]
+    pipeline: Pipeline
+    param_distributions: dict[str, Any]
     n_iter: int
     needs_sample_weight: bool
 
@@ -193,7 +193,7 @@ def build_pipeline(impute_strategy: str, model, scale: bool) -> object:
 
 
 def build_fit_params(
-    pipeline, sample_weight: np.ndarray | pd.Series | None
+    pipeline: Pipeline, sample_weight: np.ndarray | pd.Series | None
 ) -> dict:
     """Build fit params dict with the estimator step name for sample weights."""
     if sample_weight is None:
@@ -475,6 +475,16 @@ def main() -> None:
 
     if not results:
         raise SystemExit("No model results were generated.")
+    invalid_results = [
+        result
+        for result in results
+        if pd.isna(result["stable_score"])
+    ]
+    if invalid_results:
+        print(
+            "Warning: filtered models with invalid CV scores: "
+            + ", ".join(result["name"] for result in invalid_results)
+        )
     valid_results = [
         result
         for result in results
