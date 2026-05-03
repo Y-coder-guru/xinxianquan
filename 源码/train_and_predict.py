@@ -113,11 +113,11 @@ def validate_numeric_features(
 def summarize_missingness(
     df: pd.DataFrame, feature_cols: list[str], filename: str
 ) -> pd.Series:
-    missing_ratio = df[feature_cols].isna().mean().sort_values(ascending=False)
+    missing_ratios = df[feature_cols].isna().mean().sort_values(ascending=False)
     print(f"{filename} missing ratio (top 10):")
-    print(missing_ratio.head(10).round(4).to_string())
-    print(f"{filename} missing ratio (avg): {missing_ratio.mean():.4f}")
-    return missing_ratio
+    print(missing_ratios.head(10).round(4).to_string())
+    print(f"{filename} missing ratio (avg): {missing_ratios.mean():.4f}")
+    return missing_ratios
 
 
 def summarize_feature_distribution(
@@ -184,7 +184,9 @@ def setup_class_weighting(model, use_class_weight: bool) -> bool:
     return True
 
 
-def build_pipeline(impute_strategy: str, model, scale: bool) -> object:
+def build_pipeline(
+    impute_strategy: str, model, scale: bool
+) -> Pipeline:
     steps = [SimpleImputer(strategy=impute_strategy)]
     if scale:
         steps.append(RobustScaler())
@@ -275,6 +277,7 @@ def build_model_specs(impute_strategy: str, use_class_weight: bool) -> list[Mode
     logistic = LogisticRegression(
         random_state=RANDOM_STATE,
         max_iter=LOGISTIC_MAX_ITER,
+        # Saga supports the L1 penalty used in the search space.
         solver="saga",
     )
     logistic_needs_weight = setup_class_weighting(logistic, use_class_weight)
@@ -396,7 +399,7 @@ def main() -> None:
     )
     sample_weight = None
     if needs_sample_weight:
-        # Compute once and reuse for any model that needs sample_weight.
+        # Compute once and reuse for all models that need sample_weight.
         sample_weight = compute_sample_weight(
             class_weight="balanced", y=y_train_encoded
         )
