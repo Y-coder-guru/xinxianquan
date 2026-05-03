@@ -6,6 +6,14 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import LabelEncoder
 
+IMPUTE_STRATEGY = "median"
+MODEL_PARAMS = {
+    "max_depth": 6,
+    "learning_rate": 0.08,
+    "max_iter": 300,
+    "random_state": 42,
+}
+
 
 def load_csv(path: Path) -> pd.DataFrame:
     try:
@@ -58,13 +66,8 @@ def main() -> None:
     y_encoded = label_encoder.fit_transform(y_train)
 
     model = make_pipeline(
-        SimpleImputer(strategy="median"),
-        HistGradientBoostingClassifier(
-            max_depth=6,
-            learning_rate=0.08,
-            max_iter=300,
-            random_state=42,
-        ),
+        SimpleImputer(strategy=IMPUTE_STRATEGY),
+        HistGradientBoostingClassifier(**MODEL_PARAMS),
     )
     model.fit(x_train, y_encoded)
 
