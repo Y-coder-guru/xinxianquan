@@ -45,12 +45,13 @@ python 源码/train_and_predict.py
 
 ## 训练策略说明
 
-- 脚本会先输出标签分布以及 5 折交叉验证的基线准确率（HistGradientBoostingClassifier，使用缺失值处理以稳定基线评估）。
-- 使用 `SimpleImputer` + `RobustScaler` 进行缺失值处理与特征标准化（树模型对尺度不敏感，但保留该步骤用于特征尺度统一并便于后续替换为其他模型；如只关注速度可移除标准化步骤）。
-- 采用 `ExtraTreesClassifier` 并通过 `RandomizedSearchCV` (3 折) 进行简洁的超参搜索。
-- 交叉验证与超参搜索默认使用 accuracy 作为评分指标，与常见赛题评测一致；如需关注类别不均衡可改用 F1 等指标。
-- RandomizedSearchCV 默认会在全量数据上重新拟合最佳模型，脚本直接使用该模型生成提交文件。
-- 可在 `源码/train_and_predict.py` 中调整 `CV_FOLDS`、`SEARCH_ITER` 与 `EXTRATREES_PARAM_SPACE`。
+- 脚本会先输出标签分布、缺失值比例、特征分布摘要与常量特征提示，帮助判断数据质量。
+- 根据缺失值水平自动选择均值或中位数填充策略，并在类别不均衡时启用 class_weight 或样本权重。
+- 评估指标会在类均衡时使用 accuracy，出现明显不均衡时自动切换为 F1-macro（多分类）或 ROC-AUC（二分类）。
+- 基线模型采用 HistGradientBoostingClassifier 并使用重复分层交叉验证输出稳定的基线结果。
+- 扩展模型候选到 ExtraTrees、RandomForest、HistGradientBoosting 与 LogisticRegression，并对每个模型进行 RandomizedSearchCV（5 折）超参搜索。
+- 使用重复分层交叉验证对调参后的模型进行稳定性评估，选取最佳模型后再全量训练并生成提交文件。
+- 可在 `源码/train_and_predict.py` 中调整 `CV_FOLDS`、`CV_REPEATS`、`SEARCH_ITER` 与各模型的参数搜索空间。
 
 ## 使用 Docker 运行
 
