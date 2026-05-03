@@ -138,7 +138,6 @@ def main() -> None:
 
     baseline_pipeline = make_pipeline(
         SimpleImputer(strategy=IMPUTE_STRATEGY),
-        RobustScaler(),
         HistGradientBoostingClassifier(**BASELINE_MODEL_PARAMS),
     )
     baseline_cv = StratifiedKFold(
