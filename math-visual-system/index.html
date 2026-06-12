@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>数学可视化系统 · 积分 / 曲线 / 曲面 / 图表</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(15, 28, 50, 0.82);
+      --panel-2: rgba(20, 38, 68, 0.96);
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #e5edf8;
+      --muted: #93a4bb;
+      --accent: #67e8f9;
+      --accent-2: #a78bfa;
+      --accent-3: #34d399;
+      --warning: #fbbf24;
+      --danger: #fb7185;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.22), transparent 30rem),
+        radial-gradient(circle at 80% 5%, rgba(167, 139, 250, 0.18), transparent 28rem),
+        linear-gradient(145deg, #07111f 0%, #091827 44%, #0e1726 100%);
+      min-height: 100vh;
+    }
+
+    header {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 34px 24px 18px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .intro { padding: 30px; }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border: 1px solid rgba(103, 232, 249, 0.28);
+      border-radius: 999px;
+      color: var(--accent);
+      background: rgba(103, 232, 249, 0.08);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-size: 13px;
+    }
+
+    h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(32px, 5vw, 68px);
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+    }
+
+    .intro p {
+      color: var(--muted);
+      max-width: 880px;
+      line-height: 1.75;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .stat {
+      min-height: 120px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(150deg, rgba(103, 232, 249, 0.12), rgba(167, 139, 250, 0.08));
+      border: 1px solid var(--line);
+    }
+
+    .stat strong { display: block; font-size: 30px; }
+    .stat span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px 42px;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 22px;
+    }
+
+    aside {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      padding: 18px;
+    }
+
+    .tabs { display: grid; gap: 10px; }
+
+    .tab-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 15px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .tab-btn:hover { transform: translateY(-1px); border-color: rgba(103, 232, 249, 0.45); }
+    .tab-btn.active { background: linear-gradient(135deg, rgba(103, 232, 249, 0.18), rgba(167, 139, 250, 0.14)); border-color: rgba(103, 232, 249, 0.55); }
+    .tab-btn b { font-size: 14px; }
+    .tab-btn small { color: var(--muted); display: block; margin-top: 3px; }
+
+    .workspace { min-width: 0; }
+    .section { display: none; padding: 20px; }
+    .section.active { display: block; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h2 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.03em; }
+    .section-head p { margin: 0; color: var(--muted); line-height: 1.7; max-width: 850px; }
+
+    .grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; }
+    .controls { padding: 16px; border-radius: 22px; background: rgba(3, 7, 18, 0.26); border: 1px solid var(--line); }
+    .controls h3 { margin: 0 0 12px; font-size: 17px; }
+
+    label { display: block; margin: 12px 0 7px; color: #cbd5e1; font-size: 13px; font-weight: 700; }
+
+    input, select, textarea, button {
+      font: inherit;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--text);
+      border-radius: 13px;
+      padding: 11px 12px;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    textarea { min-height: 82px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.08); }
+
+    .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+    .primary {
+      width: 100%;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 15px;
+      padding: 12px 14px;
+      color: #06202b;
+      background: linear-gradient(135deg, var(--accent), var(--accent-3));
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(103, 232, 249, 0.20);
+    }
+
+    .secondary {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .canvas-card { position: relative; overflow: hidden; border-radius: 22px; border: 1px solid var(--line); background: rgba(1, 6, 15, 0.58); min-height: 570px; }
+    canvas { width: 100%; height: 570px; display: block; }
+    .readout {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .pill {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.78);
+      padding: 10px 12px;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+    }
+    .pill b { color: var(--text); display: block; font-size: 15px; margin-bottom: 3px; }
+
+    .formula-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .formula {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+    }
+    .formula:hover { border-color: rgba(103, 232, 249, 0.5); }
+    .formula b { display: block; margin-bottom: 5px; }
+    .formula code { color: var(--accent); white-space: normal; }
+
+    .error { color: var(--danger); min-height: 18px; margin-top: 10px; font-size: 13px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 10px; }
+
+    @media (max-width: 1080px) {
+      .hero, main, .grid { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .tabs { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 700px) {
+      header, main { padding-left: 12px; padding-right: 12px; }
+      .intro { padding: 22px; }
+      .stats, .tabs, .formula-grid, .readout, .row, .row-3 { grid-template-columns: 1fr; }
+      canvas { height: 460px; }
+      .canvas-card { min-height: 460px; }
+      .readout { position: static; padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <section class="card intro">
+        <span class="eyebrow">∫ Interactive Math Lab</span>
+        <h1>数学可视化系统</h1>
+        <p>一个纯前端 HTML 动态演示系统：支持自定义函数、常见函数、参数曲线、曲面热力图、二重积分黎曼和、三重积分切片体积、极坐标、向量场与多类型统计图。所有演示都用 Canvas 实时绘制，便于直接打开、教学展示和继续扩展。</p>
+      </section>
+      <section class="card stats" aria-label="系统能力概览">
+        <div class="stat"><strong>8+</strong><span>可视化模块：函数、曲线、曲面、积分、极坐标、向量场、图表等。</span></div>
+        <div class="stat"><strong>2D/3D</strong><span>平面坐标、参数轨迹、曲面投影和体积切片动态呈现。</span></div>
+        <div class="stat"><strong>自定义</strong><span>可输入 x、t、x/y、x/y/z 的函数表达式并立即绘制。</span></div>
+        <div class="stat"><strong>过程</strong><span>二重积分、三重积分通过滑块展示分割逐步加密。</span></div>
+      </section>
+    </div>
+  </header>
+
+  <main>
+    <aside class="card">
+      <nav class="tabs" aria-label="可视化模块切换">
+        <button class="tab-btn active" data-tab="function"><span><b>函数图像</b><small>常见函数 / 自定义 f(x)</small></span><span>ƒ</span></button>
+        <button class="tab-btn" data-tab="curve"><span><b>参数曲线</b><small>摆线、螺线、李萨如曲线</small></span><span>γ</span></button>
+        <button class="tab-btn" data-tab="surface"><span><b>曲面图</b><small>z = f(x,y) 热力 + 3D 投影</small></span><span>Σ</span></button>
+        <button class="tab-btn" data-tab="double"><span><b>二重积分</b><small>Riemann 小柱体累加</small></span><span>∬</span></button>
+        <button class="tab-btn" data-tab="triple"><span><b>三重积分</b><small>体积切片与密度累积</small></span><span>∭</span></button>
+        <button class="tab-btn" data-tab="polar"><span><b>极坐标</b><small>玫瑰线、心形线、螺线</small></span><span>ρ</span></button>
+        <button class="tab-btn" data-tab="field"><span><b>向量场</b><small>梯度、旋转与流线感</small></span><span>→</span></button>
+        <button class="tab-btn" data-tab="charts"><span><b>其他图表</b><small>柱状、折线、饼图、散点</small></span><span>▦</span></button>
+      </nav>
+    </aside>
+
+    <div class="workspace">
+      <section class="card section active" id="function">
+        <div class="section-head">
+          <div>
+            <h2>函数图像与常见函数库</h2>
+            <p>输入任意关于 x 的表达式，或点击预设函数，系统会自动绘制坐标轴、网格、曲线并估计零点和区间面积。</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="controls">
+            <h3>函数设置</h3>
+            <label>f(x)</label>
+            <input id="fx" value="sin(x) + 0.35*cos(3*x)" />
+            <div class="row">
+              <div><label>x 最小值</label><input id="fxMin" type="number" value="-10" step="0.5" /></div>
+              <div><label>x 最大值</label><input id="fxMax" type="number" value="10" step="0.5" /></div>
+            </div>
+            <div class="row">
+              <div><label>y 最小值</label><input id="fyMin" type="number" value="-4" step="0.5" /></div>
+              <div><label>y 最大值</label><input id="fyMax" type="number" value="4" step="0.5" /></div>
+            </div>
+            <button class="primary" data-action="draw-function">绘制函数</button>
+            <div id="functionError" class="error"></div>
+            <div class="hint">支持：sin、cos、tan、asin、acos、atan、sqrt、abs、log、exp、pow、min、max、PI、E。示例：<code>sin(x) * exp(-0.1*abs(x))</code></div>
+            <div class="formula-grid" id="functionPresets"></div>
+          </div>
+          <div class="canvas-card">
+            <canvas id="functionCanvas"></canvas>
+            <div class="readout"><div class="pill"><b id="fZeros">-</b>估计零点数量</div><div class="pill"><b id="fArea">-</b>区间绝对面积</div><div class="pill"><b id="fRange">-</b>采样值域</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section" id="curve">
+        <div class="section-head"><div><h2>参数曲线动态轨迹</h2><p>使用 x(t)、y(t) 绘制曲线，并通过进度滑块观察从 t 起点到终点的生成过程。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>曲线设置</h3>
+            <label>曲线模板</label>
+            <select id="curvePreset"></select>
+            <label>x(t)</label><input id="xt" value="5*sin(3*t + PI/2)" />
+            <label>y(t)</label><input id="yt" value="5*sin(4*t)" />
+            <div class="row"><div><label>t 起点</label><input id="tMin" type="number" value="0" step="0.1" /></div><div><label>t 终点</label><input id="tMax" type="number" value="6.283" step="0.1" /></div></div>
+            <label>生成进度</label><input id="curveProgress" type="range" min="0.02" max="1" value="1" step="0.01" />
+            <button class="primary" data-action="draw-curve">绘制曲线</button><div id="curveError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="curveCanvas"></canvas><div class="readout"><div class="pill"><b id="curveLength">-</b>估计弧长</div><div class="pill"><b id="curvePoint">-</b>当前端点</div><div class="pill"><b id="curveSamples">800</b>采样点</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="surface">
+        <div class="section-head"><div><h2>曲面 z = f(x,y)</h2><p>左半区域显示热力等高效果，右半区域显示简化 3D 网格投影，适合观察曲面峰谷、鞍点与衰减。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>曲面设置</h3>
+            <label>曲面模板</label><select id="surfacePreset"></select>
+            <label>z = f(x,y)</label><input id="zxy" value="sin(sqrt(x*x + y*y))" />
+            <div class="row"><div><label>x 范围</label><input id="surfX" type="number" value="6" step="0.5" /></div><div><label>y 范围</label><input id="surfY" type="number" value="6" step="0.5" /></div></div>
+            <label>网格密度</label><input id="surfaceDensity" type="range" min="18" max="70" value="44" />
+            <button class="primary" data-action="draw-surface">绘制曲面</button><div id="surfaceError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="surfaceCanvas"></canvas><div class="readout"><div class="pill"><b id="surfaceMinMax">-</b>z 值范围</div><div class="pill"><b id="surfaceAvg">-</b>平均高度</div><div class="pill"><b>热力 + 投影</b>展示模式</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="double">
+        <div class="section-head"><div><h2>二重积分过程：∬<sub>R</sub> f(x,y) dA</h2><p>将矩形区域 R 划分为 n×n 个小块，用每个小块中心点的函数值近似柱体高度，动态展示黎曼和逐步逼近。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>积分设置</h3>
+            <label>f(x,y)</label><input id="doubleFn" value="2 + sin(x)*cos(y)" />
+            <div class="row"><div><label>x 下界</label><input id="dx0" type="number" value="-3" step="0.25" /></div><div><label>x 上界</label><input id="dx1" type="number" value="3" step="0.25" /></div></div>
+            <div class="row"><div><label>y 下界</label><input id="dy0" type="number" value="-3" step="0.25" /></div><div><label>y 上界</label><input id="dy1" type="number" value="3" step="0.25" /></div></div>
+            <label>分割数量 n</label><input id="doubleN" type="range" min="4" max="34" value="14" />
+            <button class="primary" data-action="draw-double">计算并展示</button><div id="doubleError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="doubleCanvas"></canvas><div class="readout"><div class="pill"><b id="doubleValue">-</b>黎曼和近似值</div><div class="pill"><b id="doubleCells">-</b>小柱体数量</div><div class="pill"><b id="doubleDelta">-</b>单元面积 ΔA</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="triple">
+        <div class="section-head"><div><h2>三重积分过程：∭<sub>V</sub> ρ(x,y,z) dV</h2><p>把空间盒子切成多个体素，根据密度函数为体素着色并分层投影，展示体积积分从切片到总体累积的过程。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>体积积分设置</h3>
+            <label>ρ(x,y,z)</label><input id="tripleFn" value="1 + 0.35*sin(x*y) + 0.2*cos(z)" />
+            <div class="row-3"><div><label>x 半径</label><input id="txr" type="number" value="2" step="0.25" /></div><div><label>y 半径</label><input id="tyr" type="number" value="2" step="0.25" /></div><div><label>z 半径</label><input id="tzr" type="number" value="2" step="0.25" /></div></div>
+            <label>切片数量</label><input id="tripleN" type="range" min="4" max="18" value="9" />
+            <label>显示到第几层</label><input id="tripleLayer" type="range" min="1" max="18" value="9" />
+            <button class="primary" data-action="draw-triple">计算并展示</button><div id="tripleError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="tripleCanvas"></canvas><div class="readout"><div class="pill"><b id="tripleValue">-</b>体积积分近似值</div><div class="pill"><b id="tripleVoxels">-</b>已显示体素</div><div class="pill"><b id="tripleDV">-</b>单元体积 ΔV</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="polar">
+        <div class="section-head"><div><h2>极坐标曲线 r = f(θ)</h2><p>展示玫瑰线、心形线、阿基米德螺线等极坐标图形，帮助理解角度、半径和对称性。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>极坐标设置</h3><label>模板</label><select id="polarPreset"></select><label>r(θ)</label><input id="rtheta" value="4*cos(5*theta)" /><label>θ 最大值</label><input id="thetaMax" type="number" value="6.283" step="0.1" /><button class="primary" data-action="draw-polar">绘制极坐标</button><div id="polarError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="polarCanvas"></canvas><div class="readout"><div class="pill"><b id="polarArea">-</b>估计围成面积</div><div class="pill"><b id="polarR">-</b>r 范围</div><div class="pill"><b>θ → xy</b>坐标变换</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="field">
+        <div class="section-head"><div><h2>向量场与方向图</h2><p>输入 P(x,y)、Q(x,y)，在平面网格上绘制方向箭头，快速观察源、汇、旋转场和梯度场。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>向量场设置</h3><label>模板</label><select id="fieldPreset"></select><label>P(x,y)</label><input id="fieldP" value="-y" /><label>Q(x,y)</label><input id="fieldQ" value="x" /><label>网格密度</label><input id="fieldN" type="range" min="8" max="24" value="16" /><button class="primary" data-action="draw-field">绘制向量场</button><div id="fieldError" class="error"></div>
+          </div>
+          <div class="canvas-card"><canvas id="fieldCanvas"></canvas><div class="readout"><div class="pill"><b id="fieldAvg">-</b>平均向量长度</div><div class="pill"><b id="fieldMax">-</b>最大向量长度</div><div class="pill"><b>归一化箭头</b>便于观察方向</div></div></div>
+        </div>
+      </section>
+
+      <section class="card section" id="charts">
+        <div class="section-head"><div><h2>其他类型图表</h2><p>除了数学曲线，还提供折线、柱状、饼图和散点图，用于数据展示、实验结果说明或报告嵌入。</p></div></div>
+        <div class="grid">
+          <div class="controls">
+            <h3>数据图表设置</h3><label>图表类型</label><select id="chartType"><option value="line">折线图</option><option value="bar">柱状图</option><option value="pie">饼图</option><option value="scatter">散点图</option></select><label>数据（逗号分隔）</label><textarea id="chartData">3, 7, 4, 9, 6, 11, 8, 13</textarea><button class="primary" data-action="draw-chart">绘制图表</button><div id="chartError" class="error"></div><button class="secondary" id="randomChart">生成随机数据</button></div>
+          <div class="canvas-card"><canvas id="chartCanvas"></canvas><div class="readout"><div class="pill"><b id="chartSum">-</b>总和</div><div class="pill"><b id="chartMean">-</b>平均值</div><div class="pill"><b id="chartMax">-</b>最大值</div></div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const mathScope = {
+      sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan,
+      sqrt: Math.sqrt, abs: Math.abs, log: Math.log, exp: Math.exp, pow: Math.pow, floor: Math.floor,
+      ceil: Math.ceil, round: Math.round, min: Math.min, max: Math.max, sinh: Math.sinh, cosh: Math.cosh,
+      PI: Math.PI, E: Math.E
+    };
+
+    const colors = ['#67e8f9', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#60a5fa', '#f472b6', '#22d3ee'];
+
+    function compileExpression(expr, args) {
+      const names = Object.keys(mathScope).concat(args);
+      const values = Object.values(mathScope);
+      return (...input) => {
+        const fn = Function(...names, `"use strict"; return (${expr});`);
+        const result = fn(...values, ...input);
+        if (!Number.isFinite(result)) return NaN;
+        return result;
+      };
+    }
+
+    function setupCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(320, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(320, Math.floor(rect.height * ratio));
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function clear(ctx, w, h) {
+      const g = ctx.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, '#081426');
+      g.addColorStop(1, '#020617');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawGrid(ctx, w, h, xmin, xmax, ymin, ymax) {
+      const xTo = x => 48 + (x - xmin) / (xmax - xmin) * (w - 84);
+      const yTo = y => h - 44 - (y - ymin) / (ymax - ymin) * (h - 84);
+      ctx.strokeStyle = 'rgba(148,163,184,0.14)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i++) {
+        const x = 48 + i / 10 * (w - 84);
+        const y = 40 + i / 10 * (h - 84);
+        ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, h - 44); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(48, y); ctx.lineTo(w - 36, y); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(229,237,248,0.55)';
+      ctx.lineWidth = 1.4;
+      if (xmin < 0 && xmax > 0) { const x0 = xTo(0); ctx.beginPath(); ctx.moveTo(x0, 35); ctx.lineTo(x0, h - 40); ctx.stroke(); }
+      if (ymin < 0 && ymax > 0) { const y0 = yTo(0); ctx.beginPath(); ctx.moveTo(42, y0); ctx.lineTo(w - 30, y0); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(203,213,225,0.72)';
+      ctx.font = '12px ui-sans-serif';
+      ctx.fillText(xmin.toFixed(1), 48, h - 18);
+      ctx.fillText(xmax.toFixed(1), w - 72, h - 18);
+      ctx.fillText(ymax.toFixed(1), 10, 44);
+      ctx.fillText(ymin.toFixed(1), 10, h - 48);
+      return { xTo, yTo };
+    }
+
+    function drawFunction() {
+      const canvas = document.getElementById('functionCanvas');
+      const { ctx, w, h } = setupCanvas(canvas);
+      clear(ctx, w, h);
+      const error = document.getElementById('functionError');
+      error.textContent = '';
+      try {
+        const fn = compileExpression(document.getElementById('fx').value, ['x']);
+        const xmin = Number(fxMin.value), xmax = Number(fxMax.value), ymin = Number(fyMin.value), ymax = Number(fyMax.value);
+        const { xTo, yTo } = drawGrid(ctx, w, h, xmin, xmax, ymin, ymax);
+        const samples = 1200;
+        let prev = null, zeros = 0, area = 0, minY = Infinity, maxY = -Infinity;
+        ctx.strokeStyle = colors[0]; ctx.lineWidth = 3; ctx.beginPath();
+        for (let i = 0; i <= samples; i++) {
+          const x = xmin + (xmax - xmin) * i / samples;
+          const y = fn(x);
+          if (Number.isFinite(y)) {
+            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+            area += Math.abs(y) * (xmax - xmin) / samples;
+            if (prev && Math.sign(prev.y) !== Math.sign(y)) zeros++;
+            const px = xTo(x), py = yTo(y);
+            if (!prev || py < -1000 || py > h + 1000) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            prev = { x, y };
+          } else prev = null;
+        }
+        ctx.stroke();
+        document.getElementById('fZeros').textContent = zeros;
+        document.getElementById('fArea').textContent = area.toFixed(4);
+        document.getElementById('fRange').textContent = `${minY.toFixed(2)} ~ ${maxY.toFixed(2)}`;
+      } catch (err) { error.textContent = `表达式错误：${err.message}`; }
+    }
+
+    const functionPresets = [
+      ['正弦波', 'sin(x)'], ['阻尼振荡', 'sin(x)*exp(-0.12*abs(x))'], ['高斯钟形', 'exp(-x*x/8)'],
+      ['多项式', '0.03*x*x*x - 0.4*x'], ['双曲正弦', 'sinh(x/3)'], ['绝对值波', 'abs(sin(x))*2-1']
+    ];
+
+    function initPresets() {
+      const box = document.getElementById('functionPresets');
+      box.innerHTML = functionPresets.map(([name, expr]) => `<div class="formula" data-expr="${expr}"><b>${name}</b><code>${expr}</code></div>`).join('');
+      box.querySelectorAll('.formula').forEach(el => el.addEventListener('click', () => { fx.value = el.dataset.expr; drawFunction(); }));
+
+      const curveOptions = [
+        ['李萨如曲线', '5*sin(3*t + PI/2)', '5*sin(4*t)', 0, Math.PI * 2],
+        ['阿基米德螺线', '0.22*t*cos(t)', '0.22*t*sin(t)', 0, Math.PI * 10],
+        ['摆线', '0.7*(t - sin(t)) - 6', '0.7*(1 - cos(t))', 0, Math.PI * 8],
+        ['心形参数线', '5*pow(sin(t),3)', '4*cos(t)-1.6*cos(2*t)-0.7*cos(3*t)-0.3*cos(4*t)', 0, Math.PI * 2]
+      ];
+      fillPreset('curvePreset', curveOptions, ([, x, y, a, b]) => { xt.value = x; yt.value = y; tMin.value = a.toFixed(3); tMax.value = b.toFixed(3); drawCurve(); });
+
+      const surfaceOptions = [
+        ['波纹曲面', 'sin(sqrt(x*x + y*y))'], ['鞍面', '(x*x - y*y)/8'], ['高斯山峰', '4*exp(-(x*x+y*y)/8)'], ['复合波', 'sin(x)*cos(y)']
+      ];
+      fillPreset('surfacePreset', surfaceOptions, ([, expr]) => { zxy.value = expr; drawSurface(); });
+
+      const polarOptions = [['玫瑰线', '4*cos(5*theta)'], ['心形线', '2.5*(1-cos(theta))'], ['螺线', '0.35*theta'], ['花瓣调制', '3 + sin(6*theta)']];
+      fillPreset('polarPreset', polarOptions, ([, expr]) => { rtheta.value = expr; drawPolar(); });
+
+      const fieldOptions = [['旋转场', '-y', 'x'], ['源场', 'x', 'y'], ['汇场', '-x', '-y'], ['鞍点场', 'x', '-y'], ['非线性场', 'sin(y)', 'cos(x)']];
+      fillPreset('fieldPreset', fieldOptions, ([, p, q]) => { fieldP.value = p; fieldQ.value = q; drawField(); });
+    }
+
+    function fillPreset(id, list, onChange) {
+      const select = document.getElementById(id);
+      select.innerHTML = list.map((item, i) => `<option value="${i}">${item[0]}</option>`).join('');
+      select.addEventListener('change', () => onChange(list[Number(select.value)]));
+    }
+
+    function drawCurve() {
+      const { ctx, w, h } = setupCanvas(curveCanvas); clear(ctx, w, h); curveError.textContent = '';
+      try {
+        const xfn = compileExpression(xt.value, ['t']), yfn = compileExpression(yt.value, ['t']);
+        const a = Number(tMin.value), b = Number(tMax.value), progress = Number(curveProgress.value);
+        const n = 800, pts = [];
+        for (let i = 0; i <= n * progress; i++) { const t = a + (b - a) * i / n; pts.push({ x: xfn(t), y: yfn(t), t }); }
+        const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+        const pad = 1; const xmin = Math.min(...xs) - pad, xmax = Math.max(...xs) + pad, ymin = Math.min(...ys) - pad, ymax = Math.max(...ys) + pad;
+        const { xTo, yTo } = drawGrid(ctx, w, h, xmin, xmax, ymin, ymax);
+        let len = 0; ctx.strokeStyle = colors[1]; ctx.lineWidth = 3; ctx.beginPath();
+        pts.forEach((p, i) => { if (i) len += Math.hypot(p.x - pts[i-1].x, p.y - pts[i-1].y); i ? ctx.lineTo(xTo(p.x), yTo(p.y)) : ctx.moveTo(xTo(p.x), yTo(p.y)); }); ctx.stroke();
+        const last = pts[pts.length - 1]; ctx.fillStyle = colors[3]; ctx.beginPath(); ctx.arc(xTo(last.x), yTo(last.y), 7, 0, Math.PI * 2); ctx.fill();
+        curveLength.textContent = len.toFixed(3); curvePoint.textContent = `(${last.x.toFixed(2)}, ${last.y.toFixed(2)})`;
+      } catch (err) { curveError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function heatColor(v, min, max) {
+      const t = Math.max(0, Math.min(1, (v - min) / (max - min || 1)));
+      const r = Math.floor(40 + 210 * t), g = Math.floor(80 + 130 * (1 - Math.abs(t - 0.55))), b = Math.floor(190 + 55 * (1 - t));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function project3D(x, y, z, cx, cy, scale) {
+      return { x: cx + (x - y) * scale * 0.72, y: cy + (x + y) * scale * 0.34 - z * scale * 0.72 };
+    }
+
+    function drawSurface() {
+      const { ctx, w, h } = setupCanvas(surfaceCanvas); clear(ctx, w, h); surfaceError.textContent = '';
+      try {
+        const fn = compileExpression(zxy.value, ['x', 'y']); const n = Number(surfaceDensity.value);
+        const xr = Number(surfX.value), yr = Number(surfY.value), values = [];
+        let min = Infinity, max = -Infinity, sum = 0;
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const x = -xr + 2*xr*i/(n-1), y = -yr + 2*yr*j/(n-1), z = fn(x, y); values.push({x,y,z}); min = Math.min(min,z); max = Math.max(max,z); sum += z; }
+        const leftW = w * 0.46, cell = Math.min(leftW - 58, h - 92) / n;
+        values.forEach((p, idx) => { const i = Math.floor(idx / n), j = idx % n; ctx.fillStyle = heatColor(p.z, min, max); ctx.fillRect(36 + i*cell, 46 + (n-j-1)*cell, cell+1, cell+1); });
+        ctx.fillStyle = 'rgba(229,237,248,0.85)'; ctx.font = '13px ui-sans-serif'; ctx.fillText('热力 / 等高视图', 36, 28);
+        ctx.fillText('3D 网格投影视图', leftW + 44, 28);
+        ctx.strokeStyle = 'rgba(103,232,249,0.65)'; ctx.lineWidth = 1;
+        const scale = Math.min((w-leftW)/18, h/18); const step = Math.max(1, Math.floor(n / 18));
+        for (let i = 0; i < n; i += step) {
+          ctx.beginPath();
+          for (let j = 0; j < n; j += step) { const p = values[i*n+j]; const pr = project3D(p.x, p.y, p.z, leftW + (w-leftW)/2, h*0.58, scale); j ? ctx.lineTo(pr.x, pr.y) : ctx.moveTo(pr.x, pr.y); }
+          ctx.stroke();
+        }
+        for (let j = 0; j < n; j += step) {
+          ctx.beginPath();
+          for (let i = 0; i < n; i += step) { const p = values[i*n+j]; const pr = project3D(p.x, p.y, p.z, leftW + (w-leftW)/2, h*0.58, scale); i ? ctx.lineTo(pr.x, pr.y) : ctx.moveTo(pr.x, pr.y); }
+          ctx.stroke();
+        }
+        surfaceMinMax.textContent = `${min.toFixed(2)} ~ ${max.toFixed(2)}`; surfaceAvg.textContent = (sum / values.length).toFixed(3);
+      } catch (err) { surfaceError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function drawDouble() {
+      const { ctx, w, h } = setupCanvas(doubleCanvas); clear(ctx, w, h); doubleError.textContent = '';
+      try {
+        const fn = compileExpression(doubleFn.value, ['x', 'y']); const n = Number(doubleN.value);
+        const x0 = Number(dx0.value), x1 = Number(dx1.value), y0 = Number(dy0.value), y1 = Number(dy1.value);
+        const dx = (x1-x0)/n, dy = (y1-y0)/n; let sum = 0, max = -Infinity, min = Infinity; const bars = [];
+        for (let i=0;i<n;i++) for (let j=0;j<n;j++) { const x=x0+(i+0.5)*dx, y=y0+(j+0.5)*dy, z=Math.max(0, fn(x,y)); sum += z*dx*dy; min=Math.min(min,z); max=Math.max(max,z); bars.push({x:i,y:j,z}); }
+        const scale = Math.min(w, h) / (n * 2.25); const ox = w/2, oy = h*0.72;
+        bars.sort((a,b)=>(a.x+a.y)-(b.x+b.y)).forEach(bar => {
+          const p = project3D(bar.x-n/2, bar.y-n/2, 0, ox, oy, scale); const height = bar.z * scale * 1.4;
+          ctx.fillStyle = heatColor(bar.z, min, max).replace('rgb', 'rgba').replace(')', ',0.72)');
+          ctx.strokeStyle = 'rgba(2,6,23,0.5)';
+          ctx.beginPath(); ctx.rect(p.x, p.y-height, scale*0.75, height); ctx.fill(); ctx.stroke();
+        });
+        doubleValue.textContent = sum.toFixed(5); doubleCells.textContent = `${n*n}`; doubleDelta.textContent = (dx*dy).toFixed(4);
+      } catch (err) { doubleError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function drawTriple() {
+      const { ctx, w, h } = setupCanvas(tripleCanvas); clear(ctx, w, h); tripleError.textContent = '';
+      try {
+        const fn = compileExpression(tripleFn.value, ['x', 'y', 'z']); const n = Number(tripleN.value); tripleLayer.max = n; const layers = Math.min(Number(tripleLayer.value), n);
+        const xr=Number(txr.value), yr=Number(tyr.value), zr=Number(tzr.value); const dx=2*xr/n, dy=2*yr/n, dz=2*zr/n;
+        let sum=0, voxels=0, min=Infinity, max=-Infinity; const cells=[];
+        for(let k=0;k<n;k++) for(let i=0;i<n;i++) for(let j=0;j<n;j++) { const x=-xr+(i+.5)*dx,y=-yr+(j+.5)*dy,z=-zr+(k+.5)*dz,v=fn(x,y,z); sum+=v*dx*dy*dz; min=Math.min(min,v); max=Math.max(max,v); if(k<layers && v>0){ cells.push({i,j,k,v}); voxels++; } }
+        const scale=Math.min(w,h)/(n*3.1), ox=w/2, oy=h*0.72;
+        cells.sort((a,b)=>(a.i+a.j+a.k)-(b.i+b.j+b.k)).forEach(c=>{ const p=project3D(c.i-n/2,c.j-n/2,c.k*0.82,ox,oy,scale); ctx.fillStyle=heatColor(c.v,min,max).replace('rgb','rgba').replace(')',',0.42)'); ctx.strokeStyle='rgba(226,232,240,0.08)'; ctx.fillRect(p.x,p.y,scale*.82,scale*.82); ctx.strokeRect(p.x,p.y,scale*.82,scale*.82); });
+        tripleValue.textContent=sum.toFixed(5); tripleVoxels.textContent=voxels; tripleDV.textContent=(dx*dy*dz).toFixed(4);
+      } catch(err) { tripleError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function drawPolar() {
+      const { ctx, w, h } = setupCanvas(polarCanvas); clear(ctx, w, h); polarError.textContent = '';
+      try {
+        const fn = compileExpression(rtheta.value, ['theta']); const maxTheta = Number(thetaMax.value); const n=1400, pts=[]; let area=0, minR=Infinity, maxR=-Infinity;
+        for(let i=0;i<=n;i++){ const th=maxTheta*i/n, r=fn(th); minR=Math.min(minR,r); maxR=Math.max(maxR,r); area += 0.5*r*r*maxTheta/n; pts.push({x:r*Math.cos(th), y:r*Math.sin(th)}); }
+        const bound=Math.max(...pts.map(p=>Math.max(Math.abs(p.x),Math.abs(p.y)))) || 1; const {xTo,yTo}=drawGrid(ctx,w,h,-bound,bound,-bound,bound);
+        ctx.strokeStyle=colors[4]; ctx.lineWidth=3; ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(xTo(p.x),yTo(p.y)):ctx.moveTo(xTo(p.x),yTo(p.y))); ctx.stroke();
+        polarArea.textContent=area.toFixed(4); polarR.textContent=`${minR.toFixed(2)} ~ ${maxR.toFixed(2)}`;
+      } catch(err) { polarError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function drawField() {
+      const { ctx, w, h } = setupCanvas(fieldCanvas); clear(ctx, w, h); fieldError.textContent = '';
+      try {
+        const pfn=compileExpression(fieldP.value,['x','y']), qfn=compileExpression(fieldQ.value,['x','y']); const n=Number(fieldN.value), range=5; const {xTo,yTo}=drawGrid(ctx,w,h,-range,range,-range,range); let sum=0,max=0,count=0;
+        for(let i=0;i<n;i++) for(let j=0;j<n;j++){ const x=-range+2*range*i/(n-1), y=-range+2*range*j/(n-1), u=pfn(x,y), v=qfn(x,y), len=Math.hypot(u,v); sum+=len; max=Math.max(max,len); count++; const px=xTo(x), py=yTo(y), s=16/(len||1); arrow(ctx,px,py,px+u*s,py-v*s,colors[(i+j)%colors.length]); }
+        fieldAvg.textContent=(sum/count).toFixed(3); fieldMax.textContent=max.toFixed(3);
+      } catch(err) { fieldError.textContent = `表达式错误：${err.message}`; }
+    }
+
+    function arrow(ctx,x1,y1,x2,y2,color){ const a=Math.atan2(y2-y1,x2-x1); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-6*Math.cos(a-.45),y2-6*Math.sin(a-.45)); ctx.lineTo(x2-6*Math.cos(a+.45),y2-6*Math.sin(a+.45)); ctx.closePath(); ctx.fill(); }
+
+    function parseData() { return chartData.value.split(/[，,\s]+/).map(Number).filter(Number.isFinite); }
+    function drawChart() {
+      const { ctx, w, h } = setupCanvas(chartCanvas); clear(ctx, w, h); chartError.textContent = '';
+      const data = parseData(); if(!data.length){ chartError.textContent='请输入有效数字。'; return; }
+      const max=Math.max(...data), min=Math.min(...data), sum=data.reduce((a,b)=>a+b,0), mean=sum/data.length; chartSum.textContent=sum.toFixed(2); chartMean.textContent=mean.toFixed(2); chartMax.textContent=max.toFixed(2);
+      const type=chartType.value, left=55, right=w-32, top=42, bottom=h-58;
+      if(type==='pie'){ let start=-Math.PI/2; data.forEach((v,i)=>{ const ang=v/sum*Math.PI*2; ctx.fillStyle=colors[i%colors.length]; ctx.beginPath(); ctx.moveTo(w/2,h/2); ctx.arc(w/2,h/2,Math.min(w,h)*.32,start,start+ang); ctx.closePath(); ctx.fill(); start+=ang; }); return; }
+      drawGrid(ctx,w,h,0,data.length-1,min>0?0:min,max);
+      if(type==='bar'){ const bw=(right-left)/data.length*.72; data.forEach((v,i)=>{ const x=left+i*(right-left)/data.length+bw*.2, y=bottom-(v-(min>0?0:min))/(max-(min>0?0:min)||1)*(bottom-top); ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,bw,bottom-y); }); }
+      if(type==='line'||type==='scatter'){
+        const points = data.map((v,i) => ({ x: left+i/(data.length-1||1)*(right-left), y: bottom-(v-(min>0?0:min))/(max-(min>0?0:min)||1)*(bottom-top) }));
+        if(type==='line') { ctx.strokeStyle=colors[0]; ctx.lineWidth=3; ctx.beginPath(); points.forEach((p,i)=> i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.stroke(); }
+        points.forEach((p,i)=>{ ctx.fillStyle=colors[(i+2)%colors.length]; ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2); ctx.fill(); });
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active'); redrawActive();
+    }));
+
+    document.addEventListener('click', event => {
+      const action = event.target.dataset.action;
+      if (!action) return;
+      ({ 'draw-function': drawFunction, 'draw-curve': drawCurve, 'draw-surface': drawSurface, 'draw-double': drawDouble, 'draw-triple': drawTriple, 'draw-polar': drawPolar, 'draw-field': drawField, 'draw-chart': drawChart })[action]();
+    });
+
+    [curveProgress, surfaceDensity, doubleN, tripleN, tripleLayer, fieldN].forEach(input => input.addEventListener('input', redrawActive));
+    randomChart.addEventListener('click', () => { chartData.value = Array.from({length: 10}, () => Math.round(2 + Math.random() * 18)).join(', '); drawChart(); });
+    window.addEventListener('resize', redrawActive);
+
+    function redrawActive() {
+      const id = document.querySelector('.section.active').id;
+      ({ function: drawFunction, curve: drawCurve, surface: drawSurface, double: drawDouble, triple: drawTriple, polar: drawPolar, field: drawField, charts: drawChart })[id]();
+    }
+
+    initPresets();
+    drawFunction();
+  </script>
+</body>
+</html>
